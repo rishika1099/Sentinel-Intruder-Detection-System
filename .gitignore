@@ -1,0 +1,27 @@
+# secrets (NEVER commit) - contains Roboflow key + email
+.env
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# large / regenerable ML artifacts
+training/datasets/
+runs/
+*.cache
+
+# base weights auto-downloaded by ultralytics at runtime
+yolov8n.pt
+/yolov8*.pt
+
+# enrolled faces (privacy)
+known_faces/*
+!known_faces/.gitkeep
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

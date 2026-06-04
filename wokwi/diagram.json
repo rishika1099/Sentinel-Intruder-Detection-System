@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "author": "Sentinel IDS",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-hc-sr04", "id": "ultrasonic", "top": -150, "left": 160, "attrs": {} },
+    { "type": "wokwi-pir-motion-sensor", "id": "pir", "top": 110, "left": 180, "attrs": {} },
+    { "type": "wokwi-dht22", "id": "dht", "top": -120, "left": -180, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot", "top": 150, "left": -180, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:TX0", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX0", "$serialMonitor:TX", "", [] ],
+
+    [ "ultrasonic:VCC", "esp:VIN", "red", [] ],
+    [ "ultrasonic:GND", "esp:GND.1", "black", [] ],
+    [ "ultrasonic:TRIG", "esp:D5", "green", [] ],
+    [ "ultrasonic:ECHO", "esp:D18", "blue", [] ],
+
+    [ "pir:VCC", "esp:VIN", "red", [] ],
+    [ "pir:GND", "esp:GND.2", "black", [] ],
+    [ "pir:OUT", "esp:D19", "green", [] ],
+
+    [ "dht:VCC", "esp:3V3", "red", [] ],
+    [ "dht:GND", "esp:GND.3", "black", [] ],
+    [ "dht:SDA", "esp:D4", "green", [] ],
+
+    [ "pot:VCC", "esp:3V3", "red", [] ],
+    [ "pot:GND", "esp:GND.1", "black", [] ],
+    [ "pot:SIG", "esp:D34", "yellow", [] ]
+  ],
+  "dependencies": {}
+}

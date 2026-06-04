@@ -1,0 +1,22 @@
+# Core
+streamlit>=1.33
+numpy>=1.26
+Pillow>=10.0
+python-dotenv>=1.0
+
+# Vision
+ultralytics>=8.2          # YOLOv8 person detection (pulls torch)
+opencv-contrib-python>=4.9  # cv2 + cv2.face (LBPH face recognition)
+
+# Video sources
+yt-dlp>=2024.4.9          # resolve YouTube / web video links
+
+# Hardware integration (Wokwi / ESP32 sensors over MQTT)
+paho-mqtt>=2.0           # subscribe to sensor readings published by the board
+
+# Training (optional, only needed to train your own weapon model)
+roboflow>=1.1.0           # download labeled datasets from Roboflow Universe
+
+# NOTE: ultralytics installs opencv-python as a dependency, which conflicts
+# with opencv-contrib-python (two cv2 builds). The setup steps in README.md
+# uninstall the plain build so opencv-contrib-python (a superset) wins.
