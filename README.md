@@ -73,6 +73,26 @@ Offline sanity check (no webcam, no models needed beyond install):
 python selftest.py
 ```
 
+## Deploy to Streamlit Community Cloud
+
+1. Push your fork to GitHub (this repo already is).
+2. Click the **Open in Streamlit** badge at the top, sign in with GitHub, set
+   the main file to `app.py`, and **Deploy**. You get a public `*.streamlit.app` URL.
+3. On the hosted app, pick **Demo clip** (or paste a video URL), the cloud has
+   no webcam, then press **Start**.
+
+**Free-tier caveat (important):** the free tier gives ~1 GB RAM, and this app
+loads PyTorch + several CV models. With everything on it can run out of memory.
+If the app crashes or shows the "could not load detection models" message:
+
+- Keep **Face recognition OFF** (ArcFace/InsightFace is the heaviest piece).
+- Turn off **High-accuracy weapon mode (TTA)** for lower CPU.
+- For the full experience, run **locally** (`streamlit run app.py`) or use a
+  larger instance (paid Streamlit tier, or Hugging Face Spaces with more RAM).
+
+`packages.txt` (system libs for OpenCV) and `requirements.txt` are already set
+up for the cloud build.
+
 ## Known vs unknown faces (Stage 2)
 
 Face recognition is staged separately so you can start with plain person

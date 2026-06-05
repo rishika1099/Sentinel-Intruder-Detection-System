@@ -5,8 +5,7 @@ Pillow>=10.0
 python-dotenv>=1.0
 
 # Vision
-ultralytics>=8.2          # YOLOv8 person detection (pulls torch)
-opencv-contrib-python>=4.9  # cv2 + cv2.face (LBPH fallback face recognition)
+ultralytics>=8.2          # YOLOv8 detection (pulls torch + opencv-python)
 insightface>=0.7         # ArcFace embeddings (primary face recognition)
 onnxruntime>=1.16        # runs the ArcFace model
 
@@ -19,9 +18,15 @@ paho-mqtt>=2.0           # subscribe to sensor readings published by the board
 # LLM analyst (optional: natural-language threat descriptions + incident Q&A)
 anthropic>=0.69          # Claude API client
 
-# Training (optional, only needed to train your own weapon model)
-roboflow>=1.1.0           # download labeled datasets from Roboflow Universe
-
-# NOTE: ultralytics installs opencv-python as a dependency, which conflicts
-# with opencv-contrib-python (two cv2 builds). The setup steps in README.md
-# uninstall the plain build so opencv-contrib-python (a superset) wins.
+# OpenCV: we deliberately do NOT pin a separate opencv-contrib-python here.
+# ultralytics + insightface both depend on `opencv-python`, so pinning a
+# different build (contrib / headless) installs two conflicting cv2's and
+# breaks the import (this also breaks Streamlit Cloud). Plain opencv-python is
+# enough for everything; the only thing it lacks is cv2.face (LBPH), which is
+# just a fallback for face recognition - ArcFace (insightface) is primary.
+#
+# Want the LBPH fallback locally? install opencv-contrib-python AFTERWARDS and
+# remove opencv-python (`pip uninstall -y opencv-python`).
+#
+# Training only (NOT needed to run the app; pulls a conflicting opencv build):
+#   pip install roboflow

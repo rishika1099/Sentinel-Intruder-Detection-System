@@ -211,12 +211,24 @@ max_w = 960
 if "running" not in st.session_state:
     st.session_state.running = False
 
+# one-click demo clips (no setup needed to see it work)
+DEMO_CLIPS = {
+    "Pedestrians (intruder demo)":
+        "https://github.com/intel-iot-devkit/sample-videos/raw/master/people-detection.mp4",
+    "Person + bike + car":
+        "https://github.com/intel-iot-devkit/sample-videos/raw/master/person-bicycle-car-detection.mp4",
+    "Store aisle (top-down)":
+        "https://github.com/intel-iot-devkit/sample-videos/raw/master/store-aisle-detection.mp4",
+}
+
 # -------------------------------------- video source + run control (main area)
 ctl = st.columns([1.4, 2.4, 1.2], gap="medium")
 with ctl[0]:
-    src_kind = st.radio("Video source", ["Webcam", "File / URL / YouTube"])
+    src_kind = st.radio("Video source", ["Demo clip", "Webcam", "File / URL / YouTube"])
 with ctl[1]:
-    if src_kind == "Webcam":
+    if src_kind == "Demo clip":
+        source = DEMO_CLIPS[st.selectbox("Sample clip", list(DEMO_CLIPS))]
+    elif src_kind == "Webcam":
         source = str(st.number_input("Webcam index", 0, 10, 0))
     else:
         source = st.text_input(
@@ -244,8 +256,9 @@ events_ph = col_right.empty()
 log_ph = col_right.empty()
 
 if not running:
-    banner_ph.info("Pick a **Video source** above and press **▶ Start** to begin. "
-                   "Detection / sensor / email options are in the sidebar.")
+    banner_ph.info("👋 New here? Leave the source on **Demo clip** and press "
+                   "**▶ Start**, no setup needed. Or pick Webcam / paste a video "
+                   "link. Detection, sensors and email are in the sidebar.")
     # AI Q&A over the incidents from the last run
     past = st.session_state.get("incident_log", [])
     if enable_ai and past:
@@ -261,7 +274,14 @@ if not running:
             st.markdown("\n".join(f"- {x}" for x in past))
     st.stop()
 
-detector = get_person_detector(settings.person_conf)
+try:
+    detector = get_person_detector(settings.person_conf)
+except Exception as e:                       # e.g. out-of-memory on a small host
+    banner_ph.error(f"Could not load the detection models ({type(e).__name__}). "
+                    "On a low-memory host (e.g. free Streamlit Cloud), disable "
+                    "Face recognition and try again, or use a larger instance.")
+    st.session_state.running = False
+    st.stop()
 detector.conf = settings.person_conf
 weapon_det = None
 if enable_weapon:
