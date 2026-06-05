@@ -10,12 +10,52 @@ This is still a heuristic. For production accuracy, drop in a trained YOLO
 fire/smoke model behind this same `detect_fire` signature. The simulated
 temperature + smoke sensors in the engine add a second line of defense.
 """
+import os
+
 import cv2
 import numpy as np
 
+# Optional trained YOLO fire/smoke model (preferred over the heuristic).
+_FIRE_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "..",
+                                "models", "fire.pt")
+# classes from the model we treat as "fire". Only the clean "fire"/"flame"
+# classes are used: the model's "fire-smoke"/"factory-smoke" classes are noisy
+# (they false-fire on textured scenes), and smoke/heat hazards are already
+# covered by the simulated smoke + temperature sensors in the engine.
+_FIRE_CLASSES = {"fire", "flame"}
+_model = None  # lazily loaded singleton: None=unset, False=absent, else YOLO
+
+
+def _get_model():
+    global _model
+    if _model is None:
+        if os.path.exists(_FIRE_MODEL_PATH):
+            from ultralytics import YOLO
+            _model = YOLO(_FIRE_MODEL_PATH)
+        else:
+            _model = False
+    return _model or None
+
 
 def detect_fire(frame, min_area_ratio: float = 0.020,
-                max_edge_density: float = 0.18):
+                max_edge_density: float = 0.18, conf: float = 0.35):
+    """Return (is_fire, score, boxes, mask). Uses the trained model if present
+    (models/fire.pt), otherwise the color heuristic below."""
+    model = _get_model()
+    if model is not None:
+        boxes, mx = [], 0.0
+        for r in model.predict(frame, conf=conf, verbose=False):
+            for b in r.boxes:
+                if model.names[int(b.cls[0])].lower() in _FIRE_CLASSES:
+                    x1, y1, x2, y2 = (int(v) for v in b.xyxy[0].tolist())
+                    boxes.append((x1, y1, x2, y2))
+                    mx = max(mx, float(b.conf[0]))
+        return (len(boxes) > 0, mx, boxes, None)
+    return _detect_fire_heuristic(frame, min_area_ratio, max_edge_density)
+
+
+def _detect_fire_heuristic(frame, min_area_ratio: float = 0.020,
+                           max_edge_density: float = 0.18):
     """Return (is_fire, area_ratio, boxes, mask).
 
     is_fire is True only when a single connected fire-like region covers at

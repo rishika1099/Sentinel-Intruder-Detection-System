@@ -51,7 +51,7 @@ def _iou(a, b):
 
 class WeaponDetector:
     def __init__(self, conf: float = 0.60, coco_conf: float = 0.35,
-                 melee_conf: float = 0.50, coco_model: str = "yolov8n.pt"):
+                 melee_conf: float = 0.55, coco_model: str = "yolov8n.pt"):
         self.conf = conf
         self.coco_conf = coco_conf
         self.melee_conf = melee_conf

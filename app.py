@@ -16,6 +16,7 @@ from ids.detection.faces import FaceRecognizer
 from ids.alerts import AlertManager
 from ids.engine import IDSEngine, SEV
 from ids.activity import IncidentTracker
+from ids.llm import ThreatNarrator
 from ids import enroll
 
 st.set_page_config(page_title="Sentinel IDS", page_icon="🛡️", layout="wide")
@@ -38,9 +39,9 @@ def get_weapon_detector(conf):
     return WeaponDetector(conf=conf)
 
 
-@st.cache_resource(show_spinner="Training face recognizer...")
-def get_face_recognizer(tolerance):
-    fr = FaceRecognizer(tolerance=tolerance)
+@st.cache_resource(show_spinner="Loading ArcFace face recognizer...")
+def get_face_recognizer(sim_threshold):
+    fr = FaceRecognizer(sim_threshold=sim_threshold)
     fr.train()
     return fr
 
@@ -48,6 +49,11 @@ def get_face_recognizer(tolerance):
 @st.cache_resource(show_spinner="Connecting to Wokwi / MQTT broker...")
 def get_mqtt_sensors(broker, port, topic):
     return MqttSensors(broker, port, topic)
+
+
+@st.cache_resource(show_spinner="Connecting to Claude API...")
+def get_narrator():
+    return ThreatNarrator()
 
 
 def draw_overlay(frame, persons, faces, weapons, fire_boxes, reading, events):
@@ -158,9 +164,12 @@ with st.sidebar.expander("🎯 Detection", expanded=True):
         "Fire sensitivity (lower = more sensitive)", 0.005, 0.10, 0.020, 0.005,
         help="Largest fire-colored blob must cover at least this fraction of "
              "the frame. Raise it if you get false fire alarms.")
-    enable_faces = st.checkbox("Face recognition (Stage 2)", False)
-    settings.face_tolerance = st.slider("Face match strictness", 30, 110, 70, 5,
-                                        help="Lower = stricter match")
+    enable_faces = st.checkbox("Face recognition (Stage 2, ArcFace)", False)
+    face_sim = st.slider("Face match strictness", 0.20, 0.60, 0.40, 0.05,
+                         help="Higher = stricter (ArcFace cosine similarity)")
+    enable_ai = st.checkbox("🤖 AI threat descriptions (Claude)", False,
+                            help="Writes a natural-language report on each alert. "
+                                 "Needs ANTHROPIC_API_KEY in .env.")
 
 with st.sidebar.expander("📡 Sensors"):
     sensor_backend = st.radio("Source", ["Simulated", "Wokwi hardware (MQTT)"])
@@ -234,6 +243,19 @@ log_ph = col_right.empty()
 if not running:
     banner_ph.info("Pick a **Video source** above and press **▶ Start** to begin. "
                    "Detection / sensor / email options are in the sidebar.")
+    # AI Q&A over the incidents from the last run
+    past = st.session_state.get("incident_log", [])
+    if enable_ai and past:
+        st.subheader("🤖 Ask the AI about what happened")
+        st.caption(f"{len(past)} incident(s) logged in the last session.")
+        q = st.chat_input("e.g. Was anyone armed? What was the closest approach?")
+        if q:
+            with st.spinner("Thinking..."):
+                ans = get_narrator().ask(q, past)
+            st.markdown(f"**Q:** {q}")
+            st.markdown(f"**A:** {ans}")
+        with st.expander("Show raw incident log"):
+            st.markdown("\n".join(f"- {x}" for x in past))
     st.stop()
 
 detector = get_person_detector(settings.person_conf)
@@ -245,7 +267,7 @@ if enable_weapon:
     if not weapon_det.firearm_available:
         st.warning("Firearm model not found at models/weapon.pt - guns won't be "
                    "detected (knife/bat/scissors still are). See README to add it.")
-face_rec = get_face_recognizer(settings.face_tolerance) if enable_faces else None
+face_rec = get_face_recognizer(face_sim) if enable_faces else None
 engine = IDSEngine(settings)
 alerts = AlertManager(settings)
 if mqtt_cfg:
@@ -257,6 +279,14 @@ else:
     sensors = SimulatedSensors()
 tracker = IncidentTracker()
 weapon_window = deque(maxlen=3)   # temporal confirmation against single-frame blips
+
+narrator = get_narrator() if enable_ai else None
+if enable_ai and (narrator is None or not narrator.available):
+    st.warning("AI descriptions need ANTHROPIC_API_KEY in .env (and the anthropic "
+               "package). Running without AI.")
+    narrator = None
+ai_text, ai_last = "", 0.0       # latest AI description + its timestamp
+AI_COOLDOWN = 20.0               # seconds between AI calls (they cost money + time)
 
 cap = open_source(source)
 if cap is None or not cap.isOpened():
@@ -324,21 +354,34 @@ try:
             mc[4].metric("🧍 People", len(persons))
             mc[5].metric("🔫 Weapons", len(weapons))
 
-        # current events + activity (right column)
+        # AI threat description: only on a high/critical event, rate-limited
+        if narrator and top_sev >= SEV["high"] and (time.time() - ai_last) > AI_COOLDOWN:
+            ok_jpg, buf = cv2.imencode(".jpg", annotated)
+            ai_text = narrator.describe_alert(
+                buf.tobytes() if ok_jpg else None,
+                {"reading": reading, "people": len(persons), "weapons": weapons,
+                 "faces": faces, "fire": fire[0], "events": events, "activity": live})
+            ai_last = time.time()
+
+        # current events + activity + AI report (right column)
         ev_lines = ["#### Current events"]
         ev_lines += [f"{SEV_EMOJI[e.severity]} **{e.type}** — {e.message}"
                      for e in events] or ["✅ All clear"]
         if live:
             ev_lines += ["#### 🎬 Activity", f"_{live}_"]
+        if ai_text:
+            ev_lines += ["#### 🤖 AI assessment", f"> {ai_text}"]
         events_ph.markdown("\n".join(ev_lines))
 
         # alerts on high/critical with snapshot (rate-limited per type)
         for e in events:
             if enable_alerts and SEV[e.severity] >= SEV["high"]:
+                body = f"{e.message}\n\nTime: {time.ctime(e.timestamp)}"
+                if ai_text:
+                    body += f"\n\nAI assessment:\n{ai_text}"
                 alerts.send(
                     subject=f"[Sentinel IDS] {e.type} ({e.severity})",
-                    body=f"{e.message}\n\nTime: {time.ctime(e.timestamp)}",
-                    frame=annotated, key=e.type)
+                    body=body, frame=annotated, key=e.type)
 
         # log shows the ongoing incident (live) + finished-incident summaries
         rows = []
@@ -354,4 +397,5 @@ finally:
         incident_log.insert(0, last)
         log_ph.markdown("### 🧾 Incident log (what happened)\n"
                         + "\n".join(f"- {x}" for x in incident_log))
+    st.session_state["incident_log"] = incident_log   # keep for AI Q&A
     cap.release()

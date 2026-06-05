@@ -8,7 +8,7 @@ import numpy as np
 
 from ids.config import Settings
 from ids.sensors import SimulatedSensors
-from ids.detection.fire import detect_fire
+from ids.detection.fire import detect_fire, _detect_fire_heuristic
 from ids.engine import IDSEngine
 
 
@@ -21,7 +21,9 @@ def main():
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
     frame[150:330, 240:420] = (40, 130, 255)  # BGR orange
 
-    fire = detect_fire(frame, settings.fire_min_area_ratio)
+    # synthetic blob targets the color heuristic (the trained model
+    # only fires on realistic flames, validated separately)
+    fire = _detect_fire_heuristic(frame, settings.fire_min_area_ratio)
     print(f"fire detected={fire[0]}  area_ratio={fire[1]:.4f}  boxes={len(fire[2])}")
 
     reading = sensors.step("auto", context={"person_present": False,

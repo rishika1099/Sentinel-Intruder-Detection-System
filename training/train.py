@@ -55,7 +55,8 @@ def main():
     model = YOLO(BASE_MODEL)
     model.train(
         data=DATA, epochs=EPOCHS, imgsz=IMGSZ, device=DEVICE, batch=BATCH,
-        fraction=FRACTION, project="training/runs", name="weapons",
+        fraction=FRACTION, project="training/runs",
+        name=os.environ.get("NAME", "weapons"),
         exist_ok=True, patience=30, plots=True, **extra,
     )
 

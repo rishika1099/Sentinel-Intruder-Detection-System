@@ -6,13 +6,18 @@ python-dotenv>=1.0
 
 # Vision
 ultralytics>=8.2          # YOLOv8 person detection (pulls torch)
-opencv-contrib-python>=4.9  # cv2 + cv2.face (LBPH face recognition)
+opencv-contrib-python>=4.9  # cv2 + cv2.face (LBPH fallback face recognition)
+insightface>=0.7         # ArcFace embeddings (primary face recognition)
+onnxruntime>=1.16        # runs the ArcFace model
 
 # Video sources
 yt-dlp>=2024.4.9          # resolve YouTube / web video links
 
 # Hardware integration (Wokwi / ESP32 sensors over MQTT)
 paho-mqtt>=2.0           # subscribe to sensor readings published by the board
+
+# LLM analyst (optional: natural-language threat descriptions + incident Q&A)
+anthropic>=0.69          # Claude API client
 
 # Training (optional, only needed to train your own weapon model)
 roboflow>=1.1.0           # download labeled datasets from Roboflow Universe

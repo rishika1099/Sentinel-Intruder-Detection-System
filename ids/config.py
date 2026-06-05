@@ -3,7 +3,8 @@ import os
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
-load_dotenv()
+# override=True so values in .env win over any stale/empty shell env vars
+load_dotenv(override=True)
 
 
 @dataclass
