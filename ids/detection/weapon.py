@@ -18,6 +18,9 @@ _HERE = os.path.dirname(__file__)
 CUSTOM_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_custom.pt")
 FIREARM_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon.pt")
 MELEE_MODEL = os.path.join(_HERE, "..", "..", "models", "melee.pt")  # dedicated knife/blade
+# CCTV-trained single-class "weapon present" detector (guns + knives, robust
+# out-of-distribution) - preferred primary when available.
+WEAPON_PRESENT_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_present.pt")
 
 # simple firearm-model raw class -> display label
 _FIREARM_LABELS = {"pistol": "firearm", "knife": "knife"}
@@ -60,7 +63,11 @@ class WeaponDetector:
         # drown out blades) -> reliable knife / sword / axe / spear labels
         self.melee = YOLO(MELEE_MODEL) if os.path.exists(MELEE_MODEL) else None
 
-        if os.path.exists(CUSTOM_MODEL):
+        if os.path.exists(WEAPON_PRESENT_MODEL):
+            self.model = YOLO(WEAPON_PRESENT_MODEL)
+            self.kind = "weapon_present"  # single "weapon" class, CCTV-robust
+            self.use_coco = True          # COCO still adds bat/scissors
+        elif os.path.exists(CUSTOM_MODEL):
             self.model = YOLO(CUSTOM_MODEL)
             self.kind = "custom"          # use the model's own class names
             # our custom model is strong on firearms but weak on melee (class

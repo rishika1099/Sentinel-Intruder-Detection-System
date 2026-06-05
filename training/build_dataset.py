@@ -64,6 +64,19 @@ MELEE_CANON = {
     "spear": "spear", "ax": "axe",
 }
 
+# Single-class "weapon present" map: collapse EVERY weapon type (firearm + melee)
+# to one "weapon" class for a high-recall surveillance detector. Drops person,
+# hand, phone, ruler, fog, etc. by omission.
+WEAPON_PRESENT_CANON = {
+    "gun": "weapon", "heavy weapon": "weapon", "pistol": "weapon",
+    "handgun": "weapon", "revolver": "weapon", "rifle": "weapon", "ak": "weapon",
+    "m16": "weapon", "semi automatic": "weapon", "shotgun": "weapon",
+    "guns": "weapon", "weapon": "weapon",
+    "knife": "weapon", "cutter": "weapon", "cleaver": "weapon",
+    "short sword": "weapon", "long sword": "weapon", "spear": "weapon",
+    "ax": "weapon",
+}
+
 # pick via env: CANON_MODE=coarse (default) or specific
 CANON_BY_MODE = {"coarse": COARSE_CANON, "specific": CANON}
 
