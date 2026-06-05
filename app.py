@@ -35,8 +35,8 @@ def get_person_detector(conf):
 
 
 @st.cache_resource(show_spinner="Loading weapon detector...")
-def get_weapon_detector(conf):
-    return WeaponDetector(conf=conf)
+def get_weapon_detector():
+    return WeaponDetector()
 
 
 @st.cache_resource(show_spinner="Loading ArcFace face recognizer...")
@@ -159,6 +159,9 @@ with st.sidebar.expander("🎯 Detection", expanded=True):
     settings.intruder_distance_cm = st.slider("Intruder zone (cm)", 30, 400, 200, 10)
     enable_weapon = st.checkbox("Weapon detection (gun / knife)", True)
     settings.weapon_conf = st.slider("Weapon confidence", 0.2, 0.9, 0.60, 0.05)
+    weapon_tta = st.checkbox("High-accuracy weapon mode (TTA, slower)", True,
+                             help="Test-time augmentation: +3% mAP, +confidence "
+                                  "on real weapons, but ~2-3x slower per frame.")
     enable_fire = st.checkbox("Fire / disaster detection", True)
     settings.fire_min_area_ratio = st.slider(
         "Fire sensitivity (lower = more sensitive)", 0.005, 0.10, 0.020, 0.005,
@@ -262,8 +265,9 @@ detector = get_person_detector(settings.person_conf)
 detector.conf = settings.person_conf
 weapon_det = None
 if enable_weapon:
-    weapon_det = get_weapon_detector(settings.weapon_conf)
+    weapon_det = get_weapon_detector()
     weapon_det.conf = settings.weapon_conf
+    weapon_det.tta = weapon_tta
     if not weapon_det.firearm_available:
         st.warning("Firearm model not found at models/weapon.pt - guns won't be "
                    "detected (knife/bat/scissors still are). See README to add it.")

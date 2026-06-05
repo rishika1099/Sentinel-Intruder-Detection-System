@@ -54,10 +54,12 @@ def _iou(a, b):
 
 class WeaponDetector:
     def __init__(self, conf: float = 0.60, coco_conf: float = 0.35,
-                 melee_conf: float = 0.55, coco_model: str = "yolov8n.pt"):
+                 melee_conf: float = 0.55, coco_model: str = "yolov8n.pt",
+                 tta: bool = True):
         self.conf = conf
         self.coco_conf = coco_conf
         self.melee_conf = melee_conf
+        self.tta = tta   # test-time augmentation on the primary model (+accuracy)
 
         # dedicated melee/knife model (trained separately, no firearm class to
         # drown out blades) -> reliable knife / sword / axe / spear labels
@@ -104,7 +106,8 @@ class WeaponDetector:
         out = []
 
         if self.model is not None:
-            for r in self.model.predict(frame, conf=self.conf, verbose=False):
+            for r in self.model.predict(frame, conf=self.conf,
+                                        augment=self.tta, verbose=False):
                 for b in r.boxes:
                     raw = self.model.names[int(b.cls[0])]
                     label = self._label(raw)
