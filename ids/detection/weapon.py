@@ -21,6 +21,9 @@ MELEE_MODEL = os.path.join(_HERE, "..", "..", "models", "melee.pt")  # dedicated
 # CCTV-trained single-class "weapon present" detector (guns + knives, robust
 # out-of-distribution) - preferred primary when available.
 WEAPON_PRESENT_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_present.pt")
+# curated gun/knife model - used as a TYPING layer to name generic "weapon"
+# detections (knife mAP 0.92 in-distribution). Optional.
+WEAPON_TYPED_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_typed.pt")
 
 # simple firearm-model raw class -> display label
 _FIREARM_LABELS = {"pistol": "firearm", "knife": "knife"}
@@ -64,6 +67,9 @@ class WeaponDetector:
         # dedicated melee/knife model (trained separately, no firearm class to
         # drown out blades) -> reliable knife / sword / axe / spear labels
         self.melee = YOLO(MELEE_MODEL) if os.path.exists(MELEE_MODEL) else None
+        # curated gun/knife typing layer (names generic "weapon" detections)
+        self.typer = YOLO(WEAPON_TYPED_MODEL) if os.path.exists(WEAPON_TYPED_MODEL) else None
+        self.typer_conf = 0.45
 
         if os.path.exists(WEAPON_PRESENT_MODEL):
             self.model = YOLO(WEAPON_PRESENT_MODEL)
@@ -119,6 +125,26 @@ class WeaponDetector:
                         "label": label, "raw": raw, "conf": float(b.conf[0]),
                         "source": self.kind,
                     })
+
+        # typing layer: name the generic "weapon" boxes as gun / knife where the
+        # curated typer agrees (overlapping box). High-recall detection stays
+        # with the primary model; this just adds a specific label when confident.
+        if self.typer is not None and out:
+            typed = []
+            for r in self.typer.predict(frame, conf=self.typer_conf,
+                                        augment=self.tta, verbose=False):
+                for b in r.boxes:
+                    x1, y1, x2, y2 = b.xyxy[0].tolist()
+                    typed.append(((int(x1), int(y1), int(x2), int(y2)),
+                                  self.typer.names[int(b.cls[0])], float(b.conf[0])))
+            for d in out:
+                if d["label"] != "weapon":
+                    continue
+                best = max((t for t in typed if _iou(d["box"], t[0]) > 0.4),
+                           key=lambda t: t[2], default=None)
+                if best:
+                    d["label"] = best[1]          # "gun" / "knife"
+                    d["source"] = f"{d['source']}+typed"
 
         if self.melee is not None:
             gun_boxes = [d["box"] for d in out]   # custom-model (firearm) boxes
