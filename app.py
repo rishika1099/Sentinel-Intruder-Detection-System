@@ -47,8 +47,8 @@ def get_face_recognizer(sim_threshold):
 
 
 @st.cache_resource(show_spinner="Connecting to Wokwi / MQTT broker...")
-def get_mqtt_sensors(broker, port, topic):
-    return MqttSensors(broker, port, topic)
+def get_mqtt_sensors(broker, port, topic, command_topic):
+    return MqttSensors(broker, port, topic, command_topic)
 
 
 @st.cache_resource(show_spinner="Connecting to Claude API...")
@@ -178,14 +178,22 @@ with st.sidebar.expander("📡 Sensors"):
     sensor_backend = st.radio("Source", ["Simulated", "Wokwi hardware (MQTT)"])
     manual = None
     mqtt_cfg = None
+    auto_arm = False
     if sensor_backend == "Wokwi hardware (MQTT)":
         mode = "hardware"
         mqtt_cfg = {
-            "broker": st.text_input("MQTT broker", "broker.hivemq.com"),
+            "broker": st.text_input("MQTT broker", "test.mosquitto.org"),
             "port": int(st.number_input("Port", value=1883)),
             "topic": st.text_input("Topic", "sentinel-ids/demo/sensors"),
+            "command_topic": st.text_input("Command topic (app -> board)",
+                                           "sentinel-ids/demo/commands"),
         }
         st.caption("Run the Wokwi project in wokwi/ and match this topic.")
+        st.divider()
+        st.caption("🚨 Hardware control (app -> board)")
+        auto_arm = st.checkbox("Auto-arm alarm on threat (high/critical)", True,
+                               help="Publishes ON to the board's buzzer + LED "
+                                    "beacon while a high/critical event is live.")
     else:
         sensor_mode = st.radio("Mode", ["Auto (react to vision)", "Manual"])
         if sensor_mode == "Manual":
@@ -295,10 +303,19 @@ face_rec = get_face_recognizer(face_sim) if enable_faces else None
 engine = IDSEngine(settings)
 alerts = AlertManager(settings)
 if mqtt_cfg:
-    sensors = get_mqtt_sensors(mqtt_cfg["broker"], mqtt_cfg["port"], mqtt_cfg["topic"])
+    sensors = get_mqtt_sensors(mqtt_cfg["broker"], mqtt_cfg["port"],
+                               mqtt_cfg["topic"], mqtt_cfg["command_topic"])
     st.caption(f"📡 MQTT `{mqtt_cfg['topic']}` @ {mqtt_cfg['broker']} - "
                + ("🟢 connected" if sensors.connected else "🔴 connecting...")
                + (" · ⚠️ no data yet (start the Wokwi sim)" if sensors.stale else ""))
+    bcol = st.columns(3)
+    if bcol[0].button("🚨 Alarm ON", use_container_width=True):
+        sensors.set_alarm(True)
+        st.toast("Sent ON to the board")
+    if bcol[1].button("🔕 Alarm OFF", use_container_width=True):
+        sensors.set_alarm(False)
+        st.toast("Sent OFF to the board")
+    bcol[2].caption(f"cmd → `{mqtt_cfg['command_topic']}`")
 else:
     sensors = SimulatedSensors()
 tracker = IncidentTracker()
@@ -318,6 +335,7 @@ if cap is None or not cap.isOpened():
     st.stop()
 
 incident_log = []   # one entry per finished incident (behaviour summary)
+alarm_state = None  # last alarm command sent to the board (None = not yet sent)
 try:
     while running:
         ok, frame = cap.read()
@@ -360,6 +378,16 @@ try:
 
         # top threat banner
         top_sev = max((SEV[e.severity] for e in events), default=0)
+
+        # hardware control (app -> board): auto-arm the buzzer/LED beacon while
+        # a high/critical threat is live, stand it down when clear. Only sends
+        # on a state change so we don't spam the broker.
+        if mqtt_cfg and auto_arm:
+            want = top_sev >= SEV["high"]
+            if want != alarm_state:
+                sensors.set_alarm(want)
+                alarm_state = want
+
         if top_sev >= SEV["high"]:
             banner_ph.error("🚨 THREAT — " + "  ·  ".join(
                 e.type for e in events if SEV[e.severity] >= SEV["high"]))

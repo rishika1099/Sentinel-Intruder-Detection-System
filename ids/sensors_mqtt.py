@@ -18,8 +18,11 @@ from .sensors import SensorReading
 
 class MqttSensors:
     def __init__(self, broker: str = "broker.hivemq.com", port: int = 1883,
-                 topic: str = "sentinel-ids/demo/sensors", stale_after: float = 6.0):
+                 topic: str = "sentinel-ids/demo/sensors",
+                 command_topic: str = "sentinel-ids/demo/commands",
+                 stale_after: float = 6.0):
         self.broker, self.port, self.topic = broker, port, topic
+        self.command_topic = command_topic
         self.stale_after = stale_after
         self._lock = threading.Lock()
         self._latest: dict | None = None
@@ -77,6 +80,19 @@ class MqttSensors:
             smoke_ppm=float(d.get("smoke_ppm", 0.0)),
             temperature_c=float(d.get("temperature_c", 25.0)),
         )
+
+    def send_command(self, payload: str) -> bool:
+        """Publish a raw command string to the board's command topic
+        (app -> hardware). Returns True if handed to the client."""
+        try:
+            self.client.publish(self.command_topic, payload)
+            return True
+        except Exception:                            # noqa: BLE001
+            return False
+
+    def set_alarm(self, on: bool) -> bool:
+        """Turn the board's alarm (buzzer + LED beacon) ON or OFF."""
+        return self.send_command("ON" if on else "OFF")
 
     def close(self):
         try:

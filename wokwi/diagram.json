@@ -7,7 +7,10 @@
     { "type": "wokwi-hc-sr04", "id": "ultrasonic", "top": -150, "left": 160, "attrs": {} },
     { "type": "wokwi-pir-motion-sensor", "id": "pir", "top": 110, "left": 180, "attrs": {} },
     { "type": "wokwi-dht22", "id": "dht", "top": -120, "left": -180, "attrs": {} },
-    { "type": "wokwi-potentiometer", "id": "pot", "top": 150, "left": -180, "attrs": {} }
+    { "type": "wokwi-potentiometer", "id": "pot", "top": 150, "left": -180, "attrs": {} },
+    { "type": "wokwi-led", "id": "led", "top": -40, "left": 240, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": -40, "left": 150, "attrs": { "value": "220" } },
+    { "type": "wokwi-buzzer", "id": "buzzer", "top": 250, "left": 60, "attrs": {} }
   ],
   "connections": [
     [ "esp:TX0", "$serialMonitor:RX", "", [] ],
@@ -28,7 +31,14 @@
 
     [ "pot:VCC", "esp:3V3", "red", [] ],
     [ "pot:GND", "esp:GND.1", "black", [] ],
-    [ "pot:SIG", "esp:D34", "yellow", [] ]
+    [ "pot:SIG", "esp:D34", "yellow", [] ],
+
+    [ "esp:D2", "r1:1", "orange", [] ],
+    [ "r1:2", "led:A", "orange", [] ],
+    [ "led:C", "esp:GND.2", "black", [] ],
+
+    [ "esp:D13", "buzzer:1", "purple", [] ],
+    [ "buzzer:2", "esp:GND.3", "black", [] ]
   ],
   "dependencies": {}
 }
