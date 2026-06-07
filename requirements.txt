@@ -5,7 +5,11 @@ Pillow>=10.0
 python-dotenv>=1.0
 
 # Vision
-ultralytics>=8.2          # YOLOv8 detection (pulls torch + opencv-python)
+# headless OpenCV: no system GUI libs (libGL/libgthread) needed - essential for
+# Streamlit Cloud, whose base image can't apt-install them. Provides cv2 for
+# both our code and ultralytics.
+opencv-python-headless>=4.9
+ultralytics>=8.2          # YOLOv8 detection (pulls torch)
 
 # ArcFace face recognition (LOCAL only). insightface compiles native extensions
 # that fail on Streamlit Cloud's build image, so it's commented out here; the
