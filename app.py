@@ -225,14 +225,24 @@ max_w = 960
 if "running" not in st.session_state:
     st.session_state.running = False
 
-# one-click demo clips (no setup needed to see it work)
+# one-click demo clips (no setup needed to see it work), grouped by the class
+# each one exercises. All hotlinkable and validated against the detectors.
+_INTEL = "https://github.com/intel-iot-devkit/sample-videos/raw/master"
 DEMO_CLIPS = {
-    "Pedestrians (intruder demo)":
-        "https://github.com/intel-iot-devkit/sample-videos/raw/master/people-detection.mp4",
-    "Person + bike + car":
-        "https://github.com/intel-iot-devkit/sample-videos/raw/master/person-bicycle-car-detection.mp4",
-    "Store aisle (top-down)":
-        "https://github.com/intel-iot-devkit/sample-videos/raw/master/store-aisle-detection.mp4",
+    # --- people / intruder ---
+    "🧍 Pedestrians (intruder demo)": f"{_INTEL}/people-detection.mp4",
+    "🚲 Person + bike + car":         f"{_INTEL}/person-bicycle-car-detection.mp4",
+    "🏬 Store aisle (top-down)":      f"{_INTEL}/store-aisle-detection.mp4",
+    "🚧 Restricted worker zone":      f"{_INTEL}/worker-zone-detection.mp4",
+    "🚪 One-by-one entry":            f"{_INTEL}/one-by-one-person-detection.mp4",
+    # --- faces (Stage 2: known vs unknown) ---
+    "🙂 Faces walking (Stage 2)":     f"{_INTEL}/face-demographics-walking.mp4",
+    # --- fire ---
+    "🔥 Fire / flames":
+        "https://github.com/atulyakumar97/fire-and-gun-detection/raw/master/videos/fire1.mp4",
+    # --- weapon / armed intruder (note: clip has a burned-in watermark + box) ---
+    "🔫 Weapon (gun, demo)":
+        "https://github.com/HeeebsInc/WeaponDetection/raw/master/Figures/Demomp4.mp4",
 }
 
 # -------------------------------------- video source + run control (main area)
