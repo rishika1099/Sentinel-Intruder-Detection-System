@@ -188,11 +188,11 @@ with st.sidebar.expander("📡 Sensors"):
             "topic": st.text_input("Topic", "sentinel-ids/demo/sensors"),
             "command_topic": st.text_input("Command topic (app -> board)",
                                            "sentinel-ids/demo/commands"),
-            "board_url": st.text_input("Wokwi project URL or ID (embed board)",
-                                       "",
-                                       help="Press SAVE in Wokwi (top-left) to "
-                                            "get a project URL, then paste it "
-                                            "here to show the board in this app."),
+            "board_url": st.text_input(
+                "Wokwi project URL or ID (embed board)",
+                "https://wokwi.com/projects/466179783987887105",
+                help="The Sentinel board, embedded by default. Press the play "
+                     "button inside the panel to run it."),
         }
         st.caption("Run the Wokwi project in wokwi/ and match this topic.")
         st.divider()
