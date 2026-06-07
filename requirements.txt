@@ -6,8 +6,13 @@ python-dotenv>=1.0
 
 # Vision
 ultralytics>=8.2          # YOLOv8 detection (pulls torch + opencv-python)
-insightface>=0.7         # ArcFace embeddings (primary face recognition)
-onnxruntime>=1.16        # runs the ArcFace model
+
+# ArcFace face recognition (LOCAL only). insightface compiles native extensions
+# that fail on Streamlit Cloud's build image, so it's commented out here; the
+# app falls back gracefully (face recognition just shows as unavailable on the
+# cloud). To enable ArcFace locally: pip install insightface onnxruntime
+# insightface>=0.7
+# onnxruntime>=1.16
 
 # Video sources
 yt-dlp>=2024.4.9          # resolve YouTube / web video links
