@@ -155,51 +155,59 @@ if app_mode == "Enroll faces":
             "photos per person.")
     st.stop()
 
+DEFAULT_BOARD = "https://wokwi.com/projects/466179783987887105"
+
+# Simple on/off switches up front; the knobs live under Fine-tuning below.
 with st.sidebar.expander("🎯 Detection", expanded=True):
+    enable_weapon = st.checkbox("Weapon detection (gun / knife)", True)
+    enable_fire = st.checkbox("Fire / disaster detection", True)
+    enable_faces = st.checkbox("Face recognition (Stage 2)", False)
+    enable_ai = st.checkbox("🤖 AI threat descriptions (Claude)", False,
+                            help="Natural-language report on each alert. "
+                                 "Needs ANTHROPIC_API_KEY in .env.")
+
+with st.sidebar.expander("⚙️ Fine-tuning"):
     settings.person_conf = st.slider("Person confidence", 0.1, 0.9, 0.40, 0.05)
     settings.intruder_distance_cm = st.slider("Intruder zone (cm)", 30, 400, 200, 10)
-    enable_weapon = st.checkbox("Weapon detection (gun / knife)", True)
     settings.weapon_conf = st.slider("Weapon confidence", 0.2, 0.9, 0.60, 0.05)
     weapon_tta = st.checkbox("High-accuracy weapon mode (TTA, slower)", True,
                              help="Test-time augmentation: +3% mAP, +confidence "
                                   "on real weapons, but ~2-3x slower per frame.")
-    enable_fire = st.checkbox("Fire / disaster detection", True)
     settings.fire_min_area_ratio = st.slider(
         "Fire sensitivity (lower = more sensitive)", 0.005, 0.10, 0.020, 0.005,
         help="Largest fire-colored blob must cover at least this fraction of "
              "the frame. Raise it if you get false fire alarms.")
-    enable_faces = st.checkbox("Face recognition (Stage 2, ArcFace)", False)
     face_sim = st.slider("Face match strictness", 0.20, 0.60, 0.40, 0.05,
                          help="Higher = stricter (ArcFace cosine similarity)")
-    enable_ai = st.checkbox("🤖 AI threat descriptions (Claude)", False,
-                            help="Writes a natural-language report on each alert. "
-                                 "Needs ANTHROPIC_API_KEY in .env.")
 
 with st.sidebar.expander("📡 Sensors"):
-    sensor_backend = st.radio("Source", ["Simulated", "Wokwi hardware (MQTT)"])
+    sensor_backend = st.radio("Source", ["Simulated", "Wokwi board"])
     manual = None
     mqtt_cfg = None
     auto_arm = False
-    if sensor_backend == "Wokwi hardware (MQTT)":
+    if sensor_backend == "Wokwi board":
         mode = "hardware"
-        mqtt_cfg = {
-            "broker": st.text_input("MQTT broker", "test.mosquitto.org"),
-            "port": int(st.number_input("Port", value=1883)),
-            "topic": st.text_input("Topic", "sentinel-ids/demo/sensors"),
-            "command_topic": st.text_input("Command topic (app -> board)",
-                                           "sentinel-ids/demo/commands"),
-            "board_url": st.text_input(
-                "Wokwi project URL or ID (embed board)",
-                "https://wokwi.com/projects/466179783987887105",
-                help="The Sentinel board, embedded by default. Press the play "
-                     "button inside the panel to run it."),
-        }
-        st.caption("Run the Wokwi project in wokwi/ and match this topic.")
-        st.divider()
-        st.caption("🚨 Hardware control (app -> board)")
-        auto_arm = st.checkbox("Auto-arm alarm on threat (high/critical)", True,
-                               help="Publishes ON to the board's buzzer + LED "
-                                    "beacon while a high/critical event is live.")
+        auto_arm = st.checkbox("🚨 Auto-arm alarm on threat", True,
+                               help="Sends ON to the board's buzzer + LED beacon "
+                                    "while a high/critical event is live.")
+        # Connection details are pre-filled; only reveal them if asked.
+        if st.checkbox("Connection settings", False):
+            mqtt_cfg = {
+                "broker": st.text_input("MQTT broker", "test.mosquitto.org"),
+                "port": int(st.number_input("Port", value=1883)),
+                "topic": st.text_input("Topic", "sentinel-ids/demo/sensors"),
+                "command_topic": st.text_input("Command topic",
+                                               "sentinel-ids/demo/commands"),
+                "board_url": st.text_input("Wokwi project URL or ID",
+                                           DEFAULT_BOARD),
+            }
+        else:
+            mqtt_cfg = {
+                "broker": "test.mosquitto.org", "port": 1883,
+                "topic": "sentinel-ids/demo/sensors",
+                "command_topic": "sentinel-ids/demo/commands",
+                "board_url": DEFAULT_BOARD,
+            }
     else:
         sensor_mode = st.radio("Mode", ["Auto (react to vision)", "Manual"])
         if sensor_mode == "Manual":
