@@ -4,6 +4,7 @@ from collections import deque
 
 import cv2
 import streamlit as st
+import streamlit.components.v1 as components
 
 from ids.config import Settings
 from ids.sensors import SimulatedSensors
@@ -187,6 +188,11 @@ with st.sidebar.expander("📡 Sensors"):
             "topic": st.text_input("Topic", "sentinel-ids/demo/sensors"),
             "command_topic": st.text_input("Command topic (app -> board)",
                                            "sentinel-ids/demo/commands"),
+            "board_url": st.text_input("Wokwi project URL or ID (embed board)",
+                                       "",
+                                       help="Press SAVE in Wokwi (top-left) to "
+                                            "get a project URL, then paste it "
+                                            "here to show the board in this app."),
         }
         st.caption("Run the Wokwi project in wokwi/ and match this topic.")
         st.divider()
@@ -316,6 +322,15 @@ if mqtt_cfg:
         sensors.set_alarm(False)
         st.toast("Sent OFF to the board")
     bcol[2].caption(f"cmd → `{mqtt_cfg['command_topic']}`")
+    board_url = mqtt_cfg.get("board_url", "").strip()
+    if board_url:
+        if board_url.isdigit():
+            board_url = f"https://wokwi.com/projects/{board_url}"
+        with st.expander("🔌 Wokwi hardware board (runs in-page)", expanded=True):
+            components.iframe(board_url, height=440, scrolling=True)
+            st.caption("Press ▶ inside the board to start it. It runs in your "
+                       "browser and publishes to the broker above, the cards "
+                       "and alarm update from these readings.")
 else:
     sensors = SimulatedSensors()
 tracker = IncidentTracker()
