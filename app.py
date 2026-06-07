@@ -181,7 +181,7 @@ with st.sidebar.expander("⚙️ Fine-tuning"):
                          help="Higher = stricter (ArcFace cosine similarity)")
 
 with st.sidebar.expander("📡 Sensors"):
-    sensor_backend = st.radio("Source", ["Simulated", "Wokwi board"])
+    sensor_backend = st.radio("Source", ["Wokwi board", "Simulated"])
     manual = None
     mqtt_cfg = None
     auto_arm = False
