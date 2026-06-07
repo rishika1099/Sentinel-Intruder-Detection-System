@@ -24,6 +24,7 @@ WEAPON_PRESENT_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_present
 # curated gun/knife model - used as a TYPING layer to name generic "weapon"
 # detections (knife mAP 0.92 in-distribution). Optional.
 WEAPON_TYPED_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_typed.pt")
+WEAPON_TYPED_S_MODEL = os.path.join(_HERE, "..", "..", "models", "weapon_typed_s.pt")
 
 # simple firearm-model raw class -> display label
 _FIREARM_LABELS = {"pistol": "firearm", "knife": "knife"}
@@ -67,8 +68,11 @@ class WeaponDetector:
         # dedicated melee/knife model (trained separately, no firearm class to
         # drown out blades) -> reliable knife / sword / axe / spear labels
         self.melee = YOLO(MELEE_MODEL) if os.path.exists(MELEE_MODEL) else None
-        # curated gun/knife typing layer (names generic "weapon" detections)
-        self.typer = YOLO(WEAPON_TYPED_MODEL) if os.path.exists(WEAPON_TYPED_MODEL) else None
+        # curated gun/knife typing layer (names generic "weapon" detections).
+        # Prefer the stronger yolov8s model (gun 0.82 / knife 0.92) if present.
+        typed_path = (WEAPON_TYPED_S_MODEL if os.path.exists(WEAPON_TYPED_S_MODEL)
+                      else WEAPON_TYPED_MODEL)
+        self.typer = YOLO(typed_path) if os.path.exists(typed_path) else None
         self.typer_conf = 0.45
 
         if os.path.exists(WEAPON_PRESENT_MODEL):
