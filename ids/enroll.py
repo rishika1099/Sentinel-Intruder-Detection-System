@@ -6,8 +6,27 @@ import cv2
 import numpy as np
 
 KNOWN_DIR = "known_faces"
-_detector = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+
+# Haar face detector, built lazily. Some OpenCV builds (notably headless wheels
+# on cloud hosts) do not ship the bundled cv2.data cascades, so we never touch
+# them at import time, that would crash the whole app. If unavailable, face
+# detection degrades gracefully (count_faces returns -1 = "unknown").
+_detector = None
+_detector_ready = False
+
+
+def _get_detector():
+    global _detector, _detector_ready
+    if _detector_ready:
+        return _detector
+    _detector_ready = True
+    try:
+        path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        det = cv2.CascadeClassifier(path)
+        _detector = det if not det.empty() else None
+    except Exception:                                # noqa: BLE001
+        _detector = None
+    return _detector
 
 
 def _safe_name(name: str) -> str:
@@ -35,8 +54,12 @@ def list_people() -> dict[str, int]:
 
 
 def count_faces(image_bgr) -> int:
+    """Number of faces in the image, or -1 if detection is unavailable."""
+    det = _get_detector()
+    if det is None:
+        return -1
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
-    return len(_detector.detectMultiScale(gray, 1.1, 5, minSize=(60, 60)))
+    return len(det.detectMultiScale(gray, 1.1, 5, minSize=(60, 60)))
 
 
 def decode_image(file_bytes: bytes):
